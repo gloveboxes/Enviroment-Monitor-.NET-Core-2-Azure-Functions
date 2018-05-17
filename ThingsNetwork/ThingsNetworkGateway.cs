@@ -12,6 +12,7 @@ using System.Text;
 using Microsoft.Azure;
 using Microsoft.Azure.ServiceBus;
 using Newtonsoft.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace Glovebox.Enviromon
 {
@@ -21,7 +22,7 @@ namespace Glovebox.Enviromon
     static string eventHubEntityPath = System.Environment.GetEnvironmentVariable("EventHubPath");
 
     [FunctionName("ThingsNetworkGateway")]
-    public static async System.Threading.Tasks.Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, TraceWriter log)
+    public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, TraceWriter log)
     {
       IQueueClient queueClient = new QueueClient(eventHubConnectionString, eventHubEntityPath);
 
@@ -31,7 +32,7 @@ namespace Glovebox.Enviromon
       TheThingsNetworkEntity ttn = JsonConvert.DeserializeObject<TheThingsNetworkEntity>(data.ToString(), new JsonSerializerSettings() { ContractResolver = new CamelCasePropertyNamesContractResolver() });
       Dictionary<string, float> payload = ttn.payload_fields.ToObject<Dictionary<string, float>>();
 
-      Telemetry telemetry = new Telemetry()
+      TtnTelemetry telemetry = new TtnTelemetry()
       {
         DeviceId = ttn.dev_id,
         Geo = ttn.dev_id,
@@ -50,26 +51,5 @@ namespace Glovebox.Enviromon
 
       return (ActionResult)new OkObjectResult("Success");
     }
-  }
-
-  public class Telemetry
-  {
-    public string DeviceId { get; set; }
-    public float Celsius { get; set; }
-    public float Humidity { get; set; }
-    public float hPa { get; set; }
-    public int Light { get; set; } = 0;
-    public string Geo { get; set; }
-    public int Schema { get; set; } = 1;
-    public int Id { get; set; }
-  }
-
-  public class TheThingsNetworkEntity
-  {
-    public string app_id { get; set; }
-    public string dev_id { get; set; }
-    public int counter { get; set; }
-    public string payload_raw { get; set; }
-    public JObject payload_fields { get; set; }
   }
 }

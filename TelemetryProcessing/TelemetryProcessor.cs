@@ -26,7 +26,7 @@ namespace Glovebox.Enviromon
 
       IQueueClient queueClient = new QueueClient(eventHubConnectionString, eventHubEntityPath);
 
-      var t = JsonConvert.DeserializeObject<Item>(myEventHubMessage);
+      var t = JsonConvert.DeserializeObject<TelemetryItem>(myEventHubMessage);
 
       t.PartitionKey = "Forbes";
       t.RowKey = t.DeviceId;
@@ -56,7 +56,7 @@ namespace Glovebox.Enviromon
       }
     }
 
-    static bool ValidateTelemetry(Item telemetry)
+    static bool ValidateTelemetry(TelemetryItem telemetry)
     {
       if (telemetry.Celsius < -10 || telemetry.Celsius > 70)
       {
@@ -75,31 +75,5 @@ namespace Glovebox.Enviromon
 
       return true;
     }
-
-
-
-  }
-
-  public class Item : TableEntity
-  {
-    public string DeviceId { get; set; }
-    public double Celsius { get; set; }
-    public double Humidity { get; set; }
-    public double hPa { get; set; }
-    public double Light { get; set; }
-    public string Geo { get; set; }
-    public string Schema { get; set; }
-    public int Id { get; set; }
-    public int NotSent { get; set; }
-  }
-
-  public class Calibration : TableEntity
-  {
-    public double TemperatureSlope { get; set; }
-    public double TemperatureYIntercept { get; set; }
-    public double HumiditySlope { get; set; }
-    public double HumidityYIntercept { get; set; }
-    public double PressureSlope { get; set; }
-    public double PressureYIntercept { get; set; }
   }
 }
