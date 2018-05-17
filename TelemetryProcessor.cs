@@ -19,7 +19,7 @@ namespace Glovebox.Enviromon
     public static async void RunAsync(
     [EventHubTrigger("devices", Connection = "EventHubConnection", ConsumerGroup = "devicestate")] string myEventHubMessage,
     [Table("DeviceState", Connection = "AzureWebJobsStorage")] CloudTable outputTable,
-    // [Table("Calibration", Connection="AzureWebJobsStorage")] IQueryable<Calibration> calibrationTable,
+    [Table("Calibration", Connection = "AzureWebJobsStorage")] CloudTable calibrationTable,
     TraceWriter log)
     {
       log.Info(myEventHubMessage as string);
@@ -38,24 +38,20 @@ namespace Glovebox.Enviromon
       else
       {
         TableOperation op = TableOperation.Retrieve<Calibration>("Forbes", t.DeviceId);
-        // TableResult query = calibrationTable.Execute(op);
-        // var calibartionData = calibrationTable.Where(p => p.PartitionKey == "Forbes" && p.RowKey == t.DeviceId).ToList();
+        var query = await calibrationTable.ExecuteAsync(op);
 
-        // if (query.Result != null)
-        // {
-        //   Calibration calibration = (Calibration)query.Result;
-        //   t.Celsius = Math.Round(t.Celsius * calibration.TemperatureSlope + calibration.TemperatureYIntercept, 1);
-        //   t.Humidity = Math.Round(t.Humidity * calibration.HumiditySlope + calibration.HumidityYIntercept, 1);
-        //   t.hPa = Math.Round(t.hPa * calibration.PressureSlope + calibration.PressureYIntercept, 1);
-        // }
-
-        // string chartJson = JsonConvert.SerializeObject(t);
-        // eventHubClient.Send(new EventData(Encoding.UTF8.GetBytes(chartJson)));
+        if (query.Result != null)
+        {
+          Calibration calibration = (Calibration)query.Result;
+          t.Celsius = Math.Round(t.Celsius * calibration.TemperatureSlope + calibration.TemperatureYIntercept, 1);
+          t.Humidity = Math.Round(t.Humidity * calibration.HumiditySlope + calibration.HumidityYIntercept, 1);
+          t.hPa = Math.Round(t.hPa * calibration.PressureSlope + calibration.PressureYIntercept, 1);
+        }
 
         await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(t))));
-        
+
         var operation = TableOperation.InsertOrReplace(t);
-        await outputTable.ExecuteAsync(operation);        
+        await outputTable.ExecuteAsync(operation);
       }
     }
 
@@ -80,7 +76,10 @@ namespace Glovebox.Enviromon
     }
 
 
-    public class Item : TableEntity
+   
+  }
+
+ public class Item : TableEntity
     {
       public string DeviceId { get; set; }
       public double Celsius { get; set; }
@@ -102,7 +101,4 @@ namespace Glovebox.Enviromon
       public double PressureSlope { get; set; }
       public double PressureYIntercept { get; set; }
     }
-  }
-
-
 }
