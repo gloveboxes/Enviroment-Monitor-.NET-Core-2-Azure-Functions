@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Text;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.ServiceBus;
@@ -10,15 +12,21 @@ namespace Glovebox.Enviromon
 {
   public static class TelemetryProcessor
   {
+    static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("enviromon-eh_RootManageSharedAccessKey_EVENTHUB");
+    static string eventHubEntityPath = "chart-data";
+
     [FunctionName("TelemetryProcessor")]
-    public static async void RunAsync([EventHubTrigger("devices", Connection = "EventHubConnection", ConsumerGroup = "devicestate")] string myEventHubMessage,
-    [Table("DeviceState", Connection="AzureWebJobsStorage")] CloudTable outputTable,
+    public static async void RunAsync(
+    [EventHubTrigger("devices", Connection = "EventHubConnection", ConsumerGroup = "devicestate")] string myEventHubMessage,
+    [Table("DeviceState", Connection = "AzureWebJobsStorage")] CloudTable outputTable,
     // [Table("Calibration", Connection="AzureWebJobsStorage")] IQueryable<Calibration> calibrationTable,
     TraceWriter log)
-    // public static void Run([QueueTrigger("devices", Connection = "AzureWebJobsStorage")]string myQueueItem, TraceWriter log)
     {
       log.Info(myEventHubMessage as string);
+      IQueueClient queueClient = new QueueClient(eventHubConnectionString, eventHubEntityPath);
+
       var t = JsonConvert.DeserializeObject<Item>(myEventHubMessage);
+
       t.PartitionKey = "Forbes";
       t.RowKey = t.DeviceId;
 
@@ -44,51 +52,57 @@ namespace Glovebox.Enviromon
         // string chartJson = JsonConvert.SerializeObject(t);
         // eventHubClient.Send(new EventData(Encoding.UTF8.GetBytes(chartJson)));
 
+        await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(t))));
+        
         var operation = TableOperation.InsertOrReplace(t);
-        await outputTable.ExecuteAsync(operation);
+        await outputTable.ExecuteAsync(operation);        
+      }
+    }
+
+    static bool ValidateTelemetry(Item telemetry)
+    {
+      if (telemetry.Celsius < -10 || telemetry.Celsius > 70)
+      {
+        return false;
       }
 
-    }
-    static bool ValidateTelemetry(Item telemetry){
-    if (telemetry.Celsius < -10 || telemetry.Celsius > 70){
+      if (telemetry.Humidity < 0 || telemetry.Humidity > 100)
+      {
         return false;
-    }
+      }
 
-    if (telemetry.Humidity < 0 || telemetry.Humidity > 100){
+      if (telemetry.hPa < 0 || telemetry.hPa > 1400)
+      {
         return false;
+      }
+
+      return true;
     }
 
-    if (telemetry.hPa < 0 || telemetry.hPa > 1400) {
-        return false;
+
+    public class Item : TableEntity
+    {
+      public string DeviceId { get; set; }
+      public double Celsius { get; set; }
+      public double Humidity { get; set; }
+      public double hPa { get; set; }
+      public double Light { get; set; }
+      public string Geo { get; set; }
+      public string Schema { get; set; }
+      public int Id { get; set; }
+      public int NotSent { get; set; }
     }
 
-    return true;
-}
-
-
-public class Item: TableEntity
-{
-    public string DeviceId { get; set; }
-    public double Celsius { get; set; }
-    public double Humidity { get; set; }
-    public double hPa { get; set; }
-    public double Light { get; set; }
-    public string Geo { get; set; }
-    public string Schema { get; set; }
-    public int Id { get; set; }
-    public int NotSent { get; set; }
-}
-
-public class Calibration : TableEntity
-{
-    public double TemperatureSlope   { get;set; }
-    public double TemperatureYIntercept { get;set; }
-    public double HumiditySlope   { get;set; }
-    public double HumidityYIntercept { get;set; }
-    public double PressureSlope   { get;set; }
-    public double PressureYIntercept { get;set; }
-}
+    public class Calibration : TableEntity
+    {
+      public double TemperatureSlope { get; set; }
+      public double TemperatureYIntercept { get; set; }
+      public double HumiditySlope { get; set; }
+      public double HumidityYIntercept { get; set; }
+      public double PressureSlope { get; set; }
+      public double PressureYIntercept { get; set; }
+    }
   }
 
-  
+
 }
