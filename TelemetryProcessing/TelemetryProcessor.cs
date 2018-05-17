@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
@@ -16,13 +17,13 @@ namespace Glovebox.Enviromon
     static string eventHubEntityPath = "chart-data";
 
     [FunctionName("TelemetryProcessor")]
-    public static async void RunAsync(
-    [EventHubTrigger("devices", Connection = "EventHubConnection", ConsumerGroup = "devicestate")] string myEventHubMessage,
-    [Table("DeviceState", Connection = "AzureWebJobsStorage")] CloudTable outputTable,
-    [Table("Calibration", Connection = "AzureWebJobsStorage")] CloudTable calibrationTable,
-    TraceWriter log)
+    public static async Task RunAsync(
+        [EventHubTrigger("devices", Connection = "EventHubConnection", ConsumerGroup = "devicestate")] string myEventHubMessage,
+        [Table("DeviceState", Connection = "AzureWebJobsStorage")] CloudTable outputTable,
+        [Table("Calibration", Connection = "AzureWebJobsStorage")] CloudTable calibrationTable,
+        TraceWriter log)
     {
-      log.Info(myEventHubMessage as string);
+
       IQueueClient queueClient = new QueueClient(eventHubConnectionString, eventHubEntityPath);
 
       var t = JsonConvert.DeserializeObject<Item>(myEventHubMessage);
@@ -76,29 +77,29 @@ namespace Glovebox.Enviromon
     }
 
 
-   
+
   }
 
- public class Item : TableEntity
-    {
-      public string DeviceId { get; set; }
-      public double Celsius { get; set; }
-      public double Humidity { get; set; }
-      public double hPa { get; set; }
-      public double Light { get; set; }
-      public string Geo { get; set; }
-      public string Schema { get; set; }
-      public int Id { get; set; }
-      public int NotSent { get; set; }
-    }
+  public class Item : TableEntity
+  {
+    public string DeviceId { get; set; }
+    public double Celsius { get; set; }
+    public double Humidity { get; set; }
+    public double hPa { get; set; }
+    public double Light { get; set; }
+    public string Geo { get; set; }
+    public string Schema { get; set; }
+    public int Id { get; set; }
+    public int NotSent { get; set; }
+  }
 
-    public class Calibration : TableEntity
-    {
-      public double TemperatureSlope { get; set; }
-      public double TemperatureYIntercept { get; set; }
-      public double HumiditySlope { get; set; }
-      public double HumidityYIntercept { get; set; }
-      public double PressureSlope { get; set; }
-      public double PressureYIntercept { get; set; }
-    }
+  public class Calibration : TableEntity
+  {
+    public double TemperatureSlope { get; set; }
+    public double TemperatureYIntercept { get; set; }
+    public double HumiditySlope { get; set; }
+    public double HumidityYIntercept { get; set; }
+    public double PressureSlope { get; set; }
+    public double PressureYIntercept { get; set; }
+  }
 }
