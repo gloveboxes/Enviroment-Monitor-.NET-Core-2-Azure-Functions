@@ -1,6 +1,7 @@
 // https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/
 // https://www.nuget.org/packages/Microsoft.Azure.WebJobs.Extensions.EventHubs
 // https://www.nuget.org/packages/Microsoft.NET.Sdk.Functions/
+// https://www.nuget.org/packages/Microsoft.Azure.Amqp/ 
 
 using System;
 using System.Linq;
