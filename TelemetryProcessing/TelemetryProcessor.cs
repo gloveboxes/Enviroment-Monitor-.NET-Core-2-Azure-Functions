@@ -1,6 +1,5 @@
 // https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/
 // https://www.nuget.org/packages/Microsoft.Azure.WebJobs.Extensions.EventHubs
-// https://www.nuget.org/packages/Microsoft.Azure.EventHubs/
 // https://www.nuget.org/packages/Microsoft.NET.Sdk.Functions/
 
 using System;
@@ -18,12 +17,13 @@ namespace Glovebox.Enviromon
 {
   public static class TelemetryProcessor
   {
+    private const string ConsumerGroup = "telemetry-processor";
     static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("emEventHubSenderCS");
     static string chartDataEventHub = System.Environment.GetEnvironmentVariable("emEventHubChartData");
 
     [FunctionName("TelemetryProcessor")]
     public static async Task RunAsync(
-        [EventHubTrigger("devices", Connection = "emEventHubListenerCS", ConsumerGroup = "telemetry-processor")] string[] eventHubMessages,
+        [EventHubTrigger("devices", Connection = "emEventHubListenerCS", ConsumerGroup = ConsumerGroup)] string[] eventHubMessages,
         [Table("DeviceState", Connection = "emStorageCS")] CloudTable deviceStateTable,
         [Table("Calibration", Connection = "emStorageCS")] CloudTable calibrationTable,
         TraceWriter log)

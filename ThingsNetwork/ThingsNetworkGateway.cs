@@ -45,9 +45,9 @@ namespace Glovebox.Enviromon
 
       string json = JsonConvert.SerializeObject(telemetry);
 
-      log.Info(json);
-
       await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(json)));
+
+      log.Info(json);
 
       return (ActionResult)new OkObjectResult("Success");
     }
