@@ -1,5 +1,6 @@
 // https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/
 // https://www.nuget.org/packages/Microsoft.Azure.WebJobs.Extensions.EventHubs
+// https://www.nuget.org/packages/Microsoft.Azure.EventHubs/
 // https://www.nuget.org/packages/Microsoft.NET.Sdk.Functions/
 
 using System;
