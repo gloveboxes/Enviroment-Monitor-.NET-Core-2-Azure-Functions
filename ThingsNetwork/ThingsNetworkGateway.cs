@@ -18,13 +18,13 @@ namespace Glovebox.Enviromon
 {
     public static class Gateway 
   {
-    static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("enviromon-eh_RootManageSharedAccessKey_EVENTHUB");
-    static string eventHubEntityPath = System.Environment.GetEnvironmentVariable("EventHubPath");
+    static string eventHubSenderCS = System.Environment.GetEnvironmentVariable("EventHubSenderCS");
+    static string telemetryEventHub = System.Environment.GetEnvironmentVariable("TelemetryEventHub");
 
     [FunctionName("ThingsNetworkGateway")]
     public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, TraceWriter log)
     {
-      IQueueClient queueClient = new QueueClient(eventHubConnectionString, eventHubEntityPath);
+      IQueueClient queueClient = new QueueClient(eventHubSenderCS, telemetryEventHub);
 
       string requestBody = new StreamReader(req.Body).ReadToEnd();
       dynamic data = JsonConvert.DeserializeObject(requestBody);

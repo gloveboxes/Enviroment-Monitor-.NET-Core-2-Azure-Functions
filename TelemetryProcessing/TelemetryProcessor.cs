@@ -17,46 +17,49 @@ namespace Glovebox.Enviromon
 {
   public static class TelemetryProcessor
   {
-    static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("enviromon-eh_RootManageSharedAccessKey_EVENTHUB");
-    static string eventHubEntityPath = "chart-data";
+    static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("EventHubSenderCS");
+    static string chartDataEventHub = System.Environment.GetEnvironmentVariable("ChartDataEventHub");
 
     [FunctionName("TelemetryProcessor")]
     public static async Task RunAsync(
-        [EventHubTrigger("devices", Connection = "EventHubConnection", ConsumerGroup = "devicestate")] string myEventHubMessage,
-        [Table("DeviceState", Connection = "AzureWebJobsStorage")] CloudTable outputTable,
-        [Table("Calibration", Connection = "AzureWebJobsStorage")] CloudTable calibrationTable,
+        [EventHubTrigger("devices", Connection = "EventHubListenerCS", ConsumerGroup = "processing")] string[] eventHubMessages,
+        [Table("DeviceState", Connection = "EnviromonStorageCS")] CloudTable deviceStateTable,
+        [Table("Calibration", Connection = "EnviromonStorageCS")] CloudTable calibrationTable,
         TraceWriter log)
     {
 
-      IQueueClient queueClient = new QueueClient(eventHubConnectionString, eventHubEntityPath);
+      IQueueClient queueClient = new QueueClient(eventHubConnectionString, chartDataEventHub);
 
-      var t = JsonConvert.DeserializeObject<TelemetryItem>(myEventHubMessage);
-
-      t.PartitionKey = "Forbes";
-      t.RowKey = t.DeviceId;
-
-      if (!ValidateTelemetry(t))
+      foreach (var message in eventHubMessages)
       {
-        log.Info("Validation Failed");
-        log.Info(myEventHubMessage.ToString());
-      }
-      else
-      {
-        TableOperation op = TableOperation.Retrieve<Calibration>("Forbes", t.DeviceId);
-        var query = await calibrationTable.ExecuteAsync(op);
+        var t = JsonConvert.DeserializeObject<TelemetryItem>(message);
 
-        if (query.Result != null)
+        t.PartitionKey = "Forbes";
+        t.RowKey = t.DeviceId;
+
+        if (!ValidateTelemetry(t))
         {
-          Calibration calibration = (Calibration)query.Result;
-          t.Celsius = Math.Round(t.Celsius * calibration.TemperatureSlope + calibration.TemperatureYIntercept, 1);
-          t.Humidity = Math.Round(t.Humidity * calibration.HumiditySlope + calibration.HumidityYIntercept, 1);
-          t.hPa = Math.Round(t.hPa * calibration.PressureSlope + calibration.PressureYIntercept, 1);
+          log.Info("Validation Failed");
+          log.Info(message.ToString());
         }
+        else
+        {
+          TableOperation op = TableOperation.Retrieve<Calibration>("Forbes", t.DeviceId);
+          var query = await calibrationTable.ExecuteAsync(op);
 
-        await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(t))));
+          if (query.Result != null)
+          {
+            Calibration calibration = (Calibration)query.Result;
+            t.Celsius = Math.Round(t.Celsius * calibration.TemperatureSlope + calibration.TemperatureYIntercept, 1);
+            t.Humidity = Math.Round(t.Humidity * calibration.HumiditySlope + calibration.HumidityYIntercept, 1);
+            t.hPa = Math.Round(t.hPa * calibration.PressureSlope + calibration.PressureYIntercept, 1);
+          }
 
-        var operation = TableOperation.InsertOrReplace(t);
-        await outputTable.ExecuteAsync(operation);
+          await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(t))));
+
+          var operation = TableOperation.InsertOrReplace(t);
+          await deviceStateTable.ExecuteAsync(operation);
+        }
       }
     }
 
