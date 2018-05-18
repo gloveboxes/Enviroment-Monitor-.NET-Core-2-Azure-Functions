@@ -17,14 +17,14 @@ namespace Glovebox.Enviromon
 {
   public static class TelemetryProcessor
   {
-    static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("EventHubSenderCS");
-    static string chartDataEventHub = System.Environment.GetEnvironmentVariable("ChartDataEventHub");
+    static string eventHubConnectionString = System.Environment.GetEnvironmentVariable("emEventHubSenderCS");
+    static string chartDataEventHub = System.Environment.GetEnvironmentVariable("emEventHubChartData");
 
     [FunctionName("TelemetryProcessor")]
     public static async Task RunAsync(
-        [EventHubTrigger("devices", Connection = "EventHubListenerCS", ConsumerGroup = "processing")] string[] eventHubMessages,
-        [Table("DeviceState", Connection = "EnviromonStorageCS")] CloudTable deviceStateTable,
-        [Table("Calibration", Connection = "EnviromonStorageCS")] CloudTable calibrationTable,
+        [EventHubTrigger("devices", Connection = "emEventHubListenerCS", ConsumerGroup = "telemetry-processor")] string[] eventHubMessages,
+        [Table("DeviceState", Connection = "emStorageCS")] CloudTable deviceStateTable,
+        [Table("Calibration", Connection = "emStorageCS")] CloudTable calibrationTable,
         TraceWriter log)
     {
 

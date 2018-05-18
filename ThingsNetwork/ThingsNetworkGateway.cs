@@ -18,8 +18,8 @@ namespace Glovebox.Enviromon
 {
     public static class Gateway 
   {
-    static string eventHubSenderCS = System.Environment.GetEnvironmentVariable("EventHubSenderCS");
-    static string telemetryEventHub = System.Environment.GetEnvironmentVariable("TelemetryEventHub");
+    static string eventHubSenderCS = System.Environment.GetEnvironmentVariable("emEventHubSenderCS");
+    static string telemetryEventHub = System.Environment.GetEnvironmentVariable("emEventHubTelemetry");
 
     [FunctionName("ThingsNetworkGateway")]
     public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, TraceWriter log)
