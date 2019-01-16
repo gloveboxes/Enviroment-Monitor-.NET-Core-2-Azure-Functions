@@ -1,9 +1,10 @@
 using System;
 using System.IO;
-using System.Linq;
+// using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
+// using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Logging;
 using OpenWeatherMapSharp;
 using OpenWeatherMapSharp.Enums;
 
@@ -18,9 +19,9 @@ namespace Glovebox.Enviromon
       [TimerTrigger("0 */15 * * * *")]TimerInfo myTimer,
       [Table("DeviceState", "Forbes", "syd-master", Connection = "emStorageCS")] TelemetryItem inputTable,
       [Blob("reference-data/weather/{datetime:yyyy-MM-dd/HH-mm}/weather.csv", FileAccess.Write, Connection = "emStorageCS")] out string ReferenceData,
-      TraceWriter log)
+      ILogger log)
     {
-      log.Info($"C# Timer trigger function executed at: {DateTime.Now}");
+      log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
       bool status = Task.Run(async () => await GetPressure(inputTable)).Result;
 
       if (!status) { throw new Exception("Missing Open Weather Map data"); }

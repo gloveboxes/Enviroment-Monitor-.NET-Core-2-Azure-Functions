@@ -3,16 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Azure;
 using Microsoft.Azure.ServiceBus;
 using Newtonsoft.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Glovebox.Enviromon
 {
@@ -22,7 +21,7 @@ namespace Glovebox.Enviromon
     static string telemetryEventHub = System.Environment.GetEnvironmentVariable("emEventHubTelemetry");
 
     [FunctionName("ThingsNetworkGateway")]
-    public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, TraceWriter log)
+    public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log)
     {
       IQueueClient queueClient = new QueueClient(eventHubSenderCS, telemetryEventHub);
 
@@ -30,6 +29,11 @@ namespace Glovebox.Enviromon
       dynamic data = JsonConvert.DeserializeObject(requestBody);
 
       TheThingsNetworkEntity ttn = JsonConvert.DeserializeObject<TheThingsNetworkEntity>(data.ToString(), new JsonSerializerSettings() { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+      
+      if (ttn.payload_fields is null) {
+        return (ActionResult)new BadRequestObjectResult($"Invalid payload for {ttn.dev_id}");
+      }
+      
       Dictionary<string, float> payload = ttn.payload_fields.ToObject<Dictionary<string, float>>();
 
       TtnTelemetry telemetry = new TtnTelemetry()
@@ -47,7 +51,7 @@ namespace Glovebox.Enviromon
 
       await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(json)));
 
-      log.Info(json);
+      log.LogInformation(json);
 
       return (ActionResult)new OkObjectResult("Success");
     }
