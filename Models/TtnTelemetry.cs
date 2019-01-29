@@ -1,6 +1,11 @@
-  public class TtnTelemetry
+using Newtonsoft.Json;
+
+public class TtnTelemetry
   {
     public string DeviceId { get; set; }
+
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public float? Battery {get;set;}
     public float Celsius { get; set; }
     public float Humidity { get; set; }
     public float hPa { get; set; }

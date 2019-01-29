@@ -15,45 +15,52 @@ using Microsoft.Extensions.Logging;
 
 namespace Glovebox.Enviromon
 {
-    public static class Gateway 
-  {
-    static string eventHubSenderCS = System.Environment.GetEnvironmentVariable("emEventHubSenderCS");
-    static string telemetryEventHub = System.Environment.GetEnvironmentVariable("emEventHubTelemetry");
-
-    [FunctionName("ThingsNetworkGateway")]
-    public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log)
+    public static class Gateway
     {
-      IQueueClient queueClient = new QueueClient(eventHubSenderCS, telemetryEventHub);
+        static string eventHubSenderCS = System.Environment.GetEnvironmentVariable("emEventHubSenderCS");
+        static string telemetryEventHub = System.Environment.GetEnvironmentVariable("emEventHubTelemetry");
 
-      string requestBody = new StreamReader(req.Body).ReadToEnd();
-      dynamic data = JsonConvert.DeserializeObject(requestBody);
+        [FunctionName("ThingsNetworkGateway")]
+        public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log)
+        {
+            IQueueClient queueClient = new QueueClient(eventHubSenderCS, telemetryEventHub);
 
-      TheThingsNetworkEntity ttn = JsonConvert.DeserializeObject<TheThingsNetworkEntity>(data.ToString(), new JsonSerializerSettings() { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-      
-      if (ttn.payload_fields is null) {
-        return (ActionResult)new BadRequestObjectResult($"Invalid payload for {ttn.dev_id}");
-      }
-      
-      Dictionary<string, float> payload = ttn.payload_fields.ToObject<Dictionary<string, float>>();
+            string requestBody = new StreamReader(req.Body).ReadToEnd();
+            dynamic data = JsonConvert.DeserializeObject(requestBody);
 
-      TtnTelemetry telemetry = new TtnTelemetry()
-      {
-        DeviceId = ttn.dev_id,
-        Geo = ttn.dev_id,
-        Id = ttn.counter
-      };
+            TheThingsNetworkEntity ttn = JsonConvert.DeserializeObject<TheThingsNetworkEntity>(data.ToString(), new JsonSerializerSettings() { ContractResolver = new CamelCasePropertyNamesContractResolver() });
 
-      telemetry.Celsius = (from i in payload where i.Key.StartsWith("temperature") select i).First().Value;
-      telemetry.hPa = (from i in payload where i.Key.StartsWith("barometric_pressure") select i).First().Value;
-      telemetry.Humidity = (from i in payload where i.Key.StartsWith("relative_humidity") select i).First().Value;
+            if (ttn.payload_fields is null)
+            {
+                return (ActionResult)new BadRequestObjectResult($"Invalid payload for {ttn.dev_id}");
+            }
 
-      string json = JsonConvert.SerializeObject(telemetry);
+            Dictionary<string, float> payload = ttn.payload_fields.ToObject<Dictionary<string, float>>();
 
-      await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(json)));
+            TtnTelemetry telemetry = new TtnTelemetry()
+            {
+                DeviceId = ttn.dev_id,
+                Geo = ttn.dev_id,
+                Id = ttn.counter
+            };
 
-      log.LogInformation(json);
+            telemetry.Celsius = (from i in payload where i.Key.StartsWith("temperature") select i).First().Value;
+            telemetry.hPa = (from i in payload where i.Key.StartsWith("barometric_pressure") select i).First().Value;
+            telemetry.Humidity = (from i in payload where i.Key.StartsWith("relative_humidity") select i).First().Value;
 
-      return (ActionResult)new OkObjectResult("Success");
+            var battery = (from i in payload where i.Key.StartsWith("analog_in_4") select i);
+            if (battery.Count() != 0)
+            {
+                telemetry.Battery = battery.First().Value;
+            }
+
+            string json = JsonConvert.SerializeObject(telemetry);
+
+            await queueClient.SendAsync(new Message(Encoding.UTF8.GetBytes(json)));
+
+            log.LogInformation(json);
+
+            return (ActionResult)new OkObjectResult("Success");
+        }
     }
-  }
 }
